@@ -1,0 +1,2 @@
+User-agent: [user-agent name]
+Disallow: [URL string not to be crawled]
