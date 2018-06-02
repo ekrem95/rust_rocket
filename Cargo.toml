@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Ekrem Karatas <ekremk95@gmail.com>"]
 
 [dependencies]
+postgres = "0.15"
 rocket = "0.3.11"
 rocket_codegen = "0.3.11"
 serde = "1.0"
