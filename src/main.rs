@@ -9,11 +9,12 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 
-use postgres::{Connection, TlsMode};
 use rocket::response::NamedFile;
 use rocket_contrib::Json;
 use std::path::Path;
 
+mod pg;
+use pg::Psql;
 mod user;
 use user::{from_id, User};
 
@@ -24,30 +25,18 @@ fn index() -> &'static str {
 
 #[get("/user/<id>")]
 fn user(id: usize) -> Json<User> {
-    let conn =
-        Connection::connect("postgres://postgres:pass@localhost:5432", TlsMode::None).unwrap();
-
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS users (
-        id   SERIAL PRIMARY KEY,
-        name VARCHAR NOT NULL,
-        data BYTEA
-    )",
-        &[],
-    ).unwrap();
-
     let me = User {
         id: 0,
         name: "Ekrem".to_string(),
         data: None,
     };
 
-    conn.execute(
-        "INSERT INTO users(name, data) VALUES ($1, $2)",
+    Psql::execute(
+        &"INSERT INTO users(name, data) VALUES ($1, $2)".to_string(),
         &[&me.name, &me.data],
-    ).unwrap();
+    );
 
-    for row in &conn.query("SELECT id, name, data FROM users", &[]).unwrap() {
+    for row in &Psql::query(&"SELECT id, name, data FROM users".to_string()) {
         let user = User {
             id: row.get(0),
             name: row.get(1),
@@ -70,6 +59,8 @@ fn robots() -> Option<NamedFile> {
 }
 
 fn main() {
+    Psql::new();
+
     rocket::ignite()
         .mount("/", routes![index, favicon, robots])
         .mount("/api", routes![user])
