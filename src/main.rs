@@ -9,14 +9,14 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 
+use rocket::response::status::NotFound;
 use rocket::response::NamedFile;
 use rocket_contrib::Json;
 use std::path::Path;
 
 mod pg;
-use pg::Psql;
 mod user;
-use user::{from_id, User};
+use user::User;
 
 #[get("/")]
 fn index() -> &'static str {
@@ -25,37 +25,12 @@ fn index() -> &'static str {
 
 #[post("/user", format = "application/json", data = "<user>")]
 fn add_user(user: Json<User>) -> Json<User> {
-    Psql::execute(
-        &"INSERT INTO users(uname, email) VALUES ($1, $2)".to_string(),
-        &[&user.uname, &user.email],
-    );
-
-    for row in &Psql::query(&"SELECT id, uname, email FROM users".to_string(), &[]) {
-        let user = User {
-            id: row.get(0),
-            uname: row.get(1),
-            email: row.get(2),
-        };
-        println!("{}: {}: {}", user.id, user.uname, user.email);
-    }
-
-    from_id(user)
+    User::add_user(user)
 }
 
 #[get("/user/<id>")]
-fn get_user(id: i32) -> Json<User> {
-    let rows = &Psql::query(
-        &"SELECT id, uname, email FROM users where id = $1 LIMIT 1".to_string(),
-        &[&id],
-    );
-
-    let row = &rows.iter().last().unwrap();
-
-    from_id(Json(User {
-        id: row.get(0),
-        uname: row.get(1),
-        email: row.get(2),
-    }))
+fn get_user(id: i32) -> Result<Json<User>, NotFound<String>> {
+    User::get_user(id)
 }
 
 #[get("/favicon.ico")]
@@ -69,7 +44,7 @@ fn robots() -> Option<NamedFile> {
 }
 
 fn main() {
-    Psql::new();
+    pg::new();
 
     rocket::ignite()
         .mount("/", routes![index, favicon, robots])
