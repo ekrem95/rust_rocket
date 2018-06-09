@@ -13,25 +13,21 @@ use rocket_contrib::Json;
 #[derive(Serialize, Deserialize)]
 pub struct User {
     pub id: i32,
-    pub name: String,
-    pub data: Option<Vec<u8>>,
+    pub uname: String,
+    pub email: String,
 }
 
 impl<'r> Responder<'r> for User {
     fn respond_to(self, _: &Request) -> response::Result<'r> {
         Response::build()
-            .sized_body(Cursor::new(format!("{}:{}", self.id, self.name)))
-            .raw_header("X-User-Name", self.name)
+            .sized_body(Cursor::new(format!("{}:{}", self.id, self.uname)))
+            .raw_header("X-User-Name", self.uname)
             // .raw_header("X-User-Age", self.age.to_string())
             .header(ContentType::JSON)
             .ok()
     }
 }
 
-pub fn from_id(_: usize) -> Json<User> {
-    Json(User {
-        id: 0,
-        name: "eko".to_string(),
-        data: None,
-    })
+pub fn from_id(user: Json<User>) -> Json<User> {
+    user
 }

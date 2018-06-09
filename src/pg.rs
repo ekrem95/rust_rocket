@@ -13,15 +13,15 @@ impl Psql {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS users (
             id   SERIAL PRIMARY KEY,
-            name VARCHAR NOT NULL,
-            data BYTEA)",
+            uname VARCHAR NOT NULL,
+            email VARCHAR NOT NULL)",
             &[],
         ).unwrap();
     }
-    pub fn query(stmt: &String) -> postgres::rows::Rows {
+    pub fn query(stmt: &String, args: &[&ToSql]) -> postgres::rows::Rows {
         let conn = Connection::connect(DSN, TlsMode::None).unwrap();
 
-        conn.query(stmt, &[]).unwrap()
+        conn.query(stmt, &args).unwrap()
     }
 
     pub fn execute(stmt: &String, args: &[&ToSql]) {

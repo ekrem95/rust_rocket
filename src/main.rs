@@ -23,29 +23,39 @@ fn index() -> &'static str {
     "Hello, world!"
 }
 
-#[get("/user/<id>")]
-fn user(id: usize) -> Json<User> {
-    let me = User {
-        id: 0,
-        name: "Ekrem".to_string(),
-        data: None,
-    };
-
+#[post("/user", format = "application/json", data = "<user>")]
+fn add_user(user: Json<User>) -> Json<User> {
     Psql::execute(
-        &"INSERT INTO users(name, data) VALUES ($1, $2)".to_string(),
-        &[&me.name, &me.data],
+        &"INSERT INTO users(uname, email) VALUES ($1, $2)".to_string(),
+        &[&user.uname, &user.email],
     );
 
-    for row in &Psql::query(&"SELECT id, name, data FROM users".to_string()) {
+    for row in &Psql::query(&"SELECT id, uname, email FROM users".to_string(), &[]) {
         let user = User {
             id: row.get(0),
-            name: row.get(1),
-            data: row.get(2),
+            uname: row.get(1),
+            email: row.get(2),
         };
-        println!("{}: {}", user.id, user.name);
+        println!("{}: {}: {}", user.id, user.uname, user.email);
     }
 
-    from_id(id)
+    from_id(user)
+}
+
+#[get("/user/<id>")]
+fn get_user(id: i32) -> Json<User> {
+    let rows = &Psql::query(
+        &"SELECT id, uname, email FROM users where id = $1 LIMIT 1".to_string(),
+        &[&id],
+    );
+
+    let row = &rows.iter().last().unwrap();
+
+    from_id(Json(User {
+        id: row.get(0),
+        uname: row.get(1),
+        email: row.get(2),
+    }))
 }
 
 #[get("/favicon.ico")]
@@ -63,6 +73,6 @@ fn main() {
 
     rocket::ignite()
         .mount("/", routes![index, favicon, robots])
-        .mount("/api", routes![user])
+        .mount("/api", routes![add_user, get_user])
         .launch();
 }
