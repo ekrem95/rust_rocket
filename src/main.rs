@@ -10,7 +10,7 @@ extern crate serde_json;
 extern crate serde_derive;
 
 use rocket::response::status::NotFound;
-use rocket::response::NamedFile;
+use rocket::response::{content, NamedFile};
 use rocket_contrib::Json;
 use std::path::Path;
 
@@ -29,7 +29,7 @@ fn add_user(user: Json<User>) -> Json<User> {
 }
 
 #[get("/user/<id>")]
-fn get_user(id: i32) -> Result<Json<User>, NotFound<String>> {
+fn get_user(id: i32) -> Result<Json<User>, NotFound<content::Json<&'static str>>> {
     User::get_user(id)
 }
 

@@ -9,7 +9,7 @@ use std::io::Cursor;
 
 use rocket::http::ContentType;
 use rocket::request::Request;
-use rocket::response::{self, Responder, Response};
+use rocket::response::{self, content, Responder, Response};
 
 #[path = "pg.rs"]
 mod pg;
@@ -50,14 +50,16 @@ impl User {
 
         user
     }
-    pub fn get_user(id: i32) -> Result<Json<User>, NotFound<String>> {
+    pub fn get_user(id: i32) -> Result<Json<User>, NotFound<content::Json<&'static str>>> {
         let rows = &pg::query(
             &"SELECT id, uname, email FROM users where id = $1 LIMIT 1".to_string(),
             &[&id],
         );
 
         if rows.is_empty() {
-            return Result::Err(NotFound(format!("User not found")));
+            return Result::Err(NotFound(content::Json(
+                "{ \"message\": \"User not found\" }",
+            )));
         }
 
         let row = &rows.iter().last().unwrap();
