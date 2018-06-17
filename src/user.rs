@@ -26,29 +26,27 @@ impl<'r> Responder<'r> for User {
         Response::build()
             .sized_body(Cursor::new(format!("{}:{}", self.id, self.uname)))
             .raw_header("X-User-Name", self.uname)
-            // .raw_header("X-User-Age", self.age.to_string())
             .header(ContentType::JSON)
             .ok()
     }
 }
 
 impl User {
-    pub fn add_user(user: Json<User>) -> Json<User> {
-        pg::execute(
+    pub fn add_user(user: Json<User>) -> Result<Json<User>, NotFound<content::Json<&'static str>>> {
+        let exec = pg::execute(
             &"INSERT INTO users(uname, email) VALUES ($1, $2)".to_string(),
             &[&user.uname, &user.email],
         );
 
-        for row in &pg::query(&"SELECT id, uname, email FROM users".to_string(), &[]) {
-            let user = User {
-                id: row.get(0),
-                uname: row.get(1),
-                email: row.get(2),
-            };
-            println!("{}: {}: {}", user.id, user.uname, user.email);
+        if exec.is_err() {
+            println!("{}", exec.err().unwrap());
+
+            return Err(NotFound(content::Json(
+                "{\"message\":\"Unable to register user\"}",
+            )));
         }
 
-        user
+        Ok(user)
     }
     pub fn get_user(id: i32) -> Result<Json<User>, NotFound<content::Json<&'static str>>> {
         let rows = &pg::query(
@@ -57,14 +55,12 @@ impl User {
         );
 
         if rows.is_empty() {
-            return Result::Err(NotFound(content::Json(
-                "{ \"message\": \"User not found\" }",
-            )));
+            return Err(NotFound(content::Json("{\"message\":\"User not found\"}")));
         }
 
         let row = &rows.iter().last().unwrap();
 
-        Result::Ok(Json(User {
+        Ok(Json(User {
             id: row.get(0),
             uname: row.get(1),
             email: row.get(2),

@@ -24,7 +24,7 @@ fn index() -> &'static str {
 }
 
 #[post("/user", format = "application/json", data = "<user>")]
-fn add_user(user: Json<User>) -> Json<User> {
+fn add_user(user: Json<User>) -> Result<Json<User>, NotFound<content::Json<&'static str>>> {
     User::add_user(user)
 }
 
