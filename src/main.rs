@@ -5,6 +5,7 @@ extern crate rocket;
 extern crate rocket_contrib;
 extern crate serde;
 extern crate serde_json;
+extern crate uuid;
 
 #[macro_use]
 extern crate serde_derive;
@@ -15,10 +16,13 @@ use rocket::Data;
 use rocket_contrib::Json;
 use std::fs;
 use std::path::Path;
+use uuid::Uuid;
 
 mod pg;
 mod user;
 use user::User;
+
+static UPLOAD_DIR: &'static str = "./uploads";
 
 #[get("/")]
 fn index() -> &'static str {
@@ -37,18 +41,17 @@ fn get_user(id: i32) -> Result<Json<User>, NotFound<content::Json<&'static str>>
 
 #[post("/upload", format = "text/plain", data = "<data>")]
 fn upload(data: Data) -> Result<String, String> {
-    let dir_name = "./uploads";
-    let filename = "upload.txt";
+    let filename = Uuid::new_v4().to_string();
 
     match data
-        .stream_to_file(dir_name.to_owned() + "/" + filename)
+        .stream_to_file(UPLOAD_DIR.to_owned() + "/" + &filename)
         .map(|n| n.to_string())
     {
         Result::Ok(_) => Ok("success".to_string()),
         Result::Err(err) => {
             if err.to_string() == "No such file or directory (os error 2)" {
-                return match fs::create_dir_all(dir_name) {
-                    Result::Ok(_) => Ok("dir_added".to_string()),
+                return match fs::create_dir_all(UPLOAD_DIR) {
+                    Result::Ok(_) => Err("Please try again".to_string()),
                     Result::Err(_) => Err("Unknown error".to_string()),
                 };
             }
@@ -69,6 +72,11 @@ fn robots() -> Option<NamedFile> {
 
 fn main() {
     pg::new();
+
+    match fs::create_dir_all(UPLOAD_DIR) {
+        Result::Ok(_) => println!("Directory added: '{}'", UPLOAD_DIR),
+        Result::Err(err) => println!("{}", err),
+    };
 
     rocket::ignite()
         .mount("/", routes![index, favicon, robots])
